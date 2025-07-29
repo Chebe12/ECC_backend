@@ -27,7 +27,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./ # Deploy everything
-          server-dir: /
+          server-dir: ecc.lafmax.com/
           port: 1624
           protocol: sftp
          
