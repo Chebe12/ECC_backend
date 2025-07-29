@@ -1,0 +1,33 @@
+on:
+  push:
+    branches:
+      - master
+name: 🚀 Deploy API to production on push to production branch
+jobs:
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer, npm
+
+      - name: Set Permissions
+        run: chmod -R 775 storage bootstrap/cache
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./ # Deploy everything
+          server-dir: /
+          port: 21
+          protocol: ftps
+         
