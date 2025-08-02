@@ -2,22 +2,15 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable implements JWTSubject
-{
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+class Customer extends Model
+{
     protected $fillable = [
         'name',
         'email',
@@ -87,12 +80,6 @@ class User extends Authenticatable implements JWTSubject
         return [];
     }
 
-    public function auctions()
-    {
-        return $this->hasMany(Auction::class);
-    }
-
-
     protected $appends = ['profile_picture_url', 'cover_image_url'];
     public function getProfilePictureUrlAttribute()
     {
@@ -101,11 +88,5 @@ class User extends Authenticatable implements JWTSubject
     public function getCoverImageUrlAttribute()
     {
         return $this->cover_image ? asset('storage/' . $this->cover_image) : null;
-    }
-
-
-    public function bids()
-    {
-        return $this->hasMany(Bid::class);
     }
 }

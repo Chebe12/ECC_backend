@@ -39,6 +39,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth:api' => \Illuminate\Auth\Middleware\Authenticate::class,
             \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'auth.guard' => \App\Http\Middleware\UserAuthMiddleware::class,
+
 
         ]);
     })

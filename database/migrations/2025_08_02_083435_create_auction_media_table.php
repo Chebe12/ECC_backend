@@ -11,13 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('otps', function (Blueprint $table) {
+        Schema::create('auction_media', function (Blueprint $table) {
             $table->id();
-            $table->morphs('model'); // Adds model_type and model_id
-            $table->string('code');
-            $table->enum('type', ['email', 'phone']);
-            $table->boolean('is_used')->default(false);
-            $table->timestamp('expires_at');
+            $table->foreignId('auction_id')->constrained()->onDelete('cascade');
+            $table->string('media_type')->nullable();
+            $table->string('media_path');
             $table->timestamps();
         });
     }
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('otps');
+        Schema::dropIfExists('auction_media');
     }
 };
