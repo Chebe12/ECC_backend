@@ -281,6 +281,7 @@ class BidController extends Controller
     public function getSingleAuction($id)
     {
         $auction = Auction::with([
+            'media',
             'bids.user:id,name,email',
             'creator:id,name,email',
         ])->findOrFail($id);
