@@ -199,6 +199,7 @@ class BidController extends Controller
         $filter = $request->query('filter');
 
         $query = Auction::with([
+            'media',
             'bids.user:id,name,email',
             'creator:id,name,email',
         ]);
