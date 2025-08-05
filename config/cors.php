@@ -20,7 +20,7 @@ return [
     'allowed_methods' => ['POST', 'GET', 'PUT', 'DELETE'],
 
     // 'allowed_origins' => ['*'],
-    'allowed_origins' => ['https://test.lafmax.com', 'https://memorabid.vercel.app/', 'https://memorabid.vercel.app', 'http://localhost:5173', 'http://localhost:3000'],
+    'allowed_origins' => ['https://test.lafmax.com', 'https://memorabid.vercel.app', 'http://localhost:5173', 'http://localhost:3000'],
 
     'allowed_origins_patterns' => [],
 

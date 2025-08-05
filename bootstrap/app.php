@@ -20,6 +20,8 @@ use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Illuminate\Routing\Exceptions\RouteNotFoundException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use App\Helpers\ResponseData;
+use Illuminate\Http\Middleware\HandleCors;
+
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -32,15 +34,19 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         //
         $middleware->alias([
-            // 'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
-            // 'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
-            'api' => \Illuminate\Http\Middleware\HandleCors::class,
             'auth' => \App\Http\Middleware\Authenticate::class,
             'auth:api' => \Illuminate\Auth\Middleware\Authenticate::class,
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'auth.guard' => \App\Http\Middleware\UserAuthMiddleware::class,
+            // \Illuminate\Http\Middleware\HandleCors::class,
 
+
+
+
+        ]);
+
+        $middleware->appendToGroup('api', [
+            HandleCors::class,
 
         ]);
     })
