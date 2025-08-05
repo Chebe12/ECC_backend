@@ -32,8 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         //
         $middleware->alias([
-            'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
-            'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
+            // 'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+            // 'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
             'api' => \Illuminate\Http\Middleware\HandleCors::class,
             'auth' => \App\Http\Middleware\Authenticate::class,
             'auth:api' => \Illuminate\Auth\Middleware\Authenticate::class,

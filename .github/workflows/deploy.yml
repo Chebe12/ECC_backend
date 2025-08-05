@@ -23,11 +23,10 @@ jobs:
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          server: "ftp.rosymaxpharmacy.com"
+          username: "ECC@testing.rosymaxpharmacy.com"
+          password: "dLL9DKGiL0Op"
           local-dir: ./ # Deploy everything
-          server-dir: ecc.lafmax.com/
-          port: 1624
-          protocol: sftp
-         
+          server-dir: /
+          port: 21
+          protocol: ftps

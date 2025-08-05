@@ -193,12 +193,39 @@ class BidController extends Controller
         }
     }
 
-    public function getAllAuctionsForAdmin()
+    public function getAllAuctions(Request $request)
     {
-        $auctions = Auction::with([
+        $now = now();
+        $filter = $request->query('filter');
+
+        $query = Auction::with([
             'bids.user:id,name,email',
             'creator:id,name,email',
-        ])->get();
+        ]);
+
+        switch ($filter) {
+            case 'live':
+                $query->where('status', 'approved')
+                    ->where('auction_start_time', '<=', $now)
+                    ->where('auction_end_time', '>', $now);
+                break;
+
+            case 'featured':
+                $query->where('is_featured', true);
+                break;
+
+            case 'ending_soon':
+                $query->where('status', 'approved')
+                    ->whereBetween('auction_end_time', [$now, $now->copy()->addHour()]);
+                break;
+
+            case 'all':
+            default:
+                // No additional filtering
+                break;
+        }
+
+        $auctions = $query->get();
 
         $auctionsData = $auctions->map(function ($auction) {
             $highestBid = $auction->bids->max('amount');
@@ -218,36 +245,68 @@ class BidController extends Controller
             ];
         });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $auctionsData
-        ]);
+        return ResponseData::success($auctionsData, 'Auctions fetched successfully.');
     }
 
-    public function getSingleAuctionForAdmin($id)
+
+    // public function getSingleAuction($id)
+    // {
+    //     $auction = Auction::with([
+    //         'bids.user:id,name,email',
+    //         'creator:id,name,email',
+    //     ])->findOrFail($id);
+
+    //     $bids = $auction->bids;
+
+    //     $highestBid = $bids->max('amount');
+    //     $totalActiveBidders = $bids->unique('user_id')->count();
+    //     $highestBidder = $bids->firstWhere('amount', $highestBid)?->user;
+
+    //     $response = [
+    //         'auction' => $auction,
+    //         'total_bids' => $bids->count(),
+    //         'total_active_bidders' => $totalActiveBidders,
+    //         'highest_bid' => $highestBid,
+    //         'highest_bidder' => $highestBidder ? [
+    //             'id' => $highestBidder->id,
+    //             'name' => $highestBidder->name,
+    //             'email' => $highestBidder->email,
+    //         ] : null,
+    //     ];
+
+    //     return ResponseData::success($response, 'Auction details retrieved successfully.', 200);
+    // }
+
+    public function getSingleAuction($id)
     {
         $auction = Auction::with([
             'bids.user:id,name,email',
             'creator:id,name,email',
         ])->findOrFail($id);
 
-        $highestBid = $auction->bids->max('amount');
-        $totalActiveBidders = $auction->bids->unique('user_id')->count();
-        $highestBidder = $auction->bids->where('amount', $highestBid)->first()?->user;
+        $bids = $auction->bids;
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'auction' => $auction,
-                'total_bids' => $auction->bids->count(),
-                'total_active_bidders' => $totalActiveBidders,
-                'highest_bid' => $highestBid,
-                'highest_bidder' => $highestBidder ? [
-                    'id' => $highestBidder->id,
-                    'name' => $highestBidder->name,
-                    'email' => $highestBidder->email,
-                ] : null,
-            ]
-        ]);
+        $highestBid = $bids->max('amount');
+
+        $highestBidRecord = $bids
+            ->where('amount', $highestBid)
+            ->filter(fn($bid) => $bid->user !== null)
+            ->first();
+
+        $highestBidder = $highestBidRecord?->user;
+
+        $response = [
+            'auction' => $auction,
+            'total_bids' => $bids->count(),
+            'total_active_bidders' => $bids->unique('user_id')->count(),
+            'highest_bid' => $highestBid,
+            'highest_bidder' => $highestBidder ? [
+                'id' => $highestBidder->id,
+                'name' => $highestBidder->name,
+                'email' => $highestBidder->email,
+            ] : null,
+        ];
+
+        return ResponseData::success($response, 'Auction details retrieved successfully.', 200);
     }
 }

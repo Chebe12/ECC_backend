@@ -52,7 +52,7 @@ Route::group(
         // User Profile
         Route::group(['prefix' => 'profile'], function () {
             // User Profile
-            Route::group(['prefix' => 'user', 'middleware' => ['api', 'auth.guard:user']], function () {
+            Route::group(['prefix' => 'user', 'middleware' => ['auth', 'auth.guard:user']], function () {
                 Route::get('/fetch',  'User\UserController@me');
                 Route::get('/view/{id}',  'User\UserController@show');
                 Route::post('/update/{id}',  'User\UserController@update');
@@ -60,7 +60,7 @@ Route::group(
                 Route::post('/change_password',  'User\UserController@changePassword');
             });
             // Customer Profile
-            Route::group(['prefix' => 'customer', 'middleware' => ['api', 'auth.guard:customer']], function () {
+            Route::group(['prefix' => 'customer', 'middleware' => ['auth', 'auth.guard:customer']], function () {
                 Route::get('/fetch',  'Customer\CustomerController@me');
                 Route::get('/view/{id}',  'Customer\CustomerController@show');
                 Route::post('/update',  'Customer\CustomerController@update');
@@ -68,7 +68,7 @@ Route::group(
                 Route::post('/change_password',  'Customer\CustomerController@changePassword');
             });
             // Admin Profile
-            Route::group(['prefix' => 'admin', 'middleware' => ['api', 'auth.guard:admin']], function () {
+            Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'auth.guard:admin']], function () {
                 Route::get('/fetch',  'Admin\AdminController@me');
                 Route::get('/view/{id}',  'Admin\AdminController@show');
                 Route::post('/update/{id}',  'Admin\AdminController@update');
@@ -84,7 +84,7 @@ Route::group(
 
         Route::group(['prefix' => 'auction'], function () {
             // User Management
-            Route::group(['prefix' => 'admin', 'middleware' => ['api', 'auth.guard:admin']], function () {
+            Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'auth.guard:admin']], function () {
 
                 Route::post('/post',  'Admin\AuctionController@store');
                 Route::get('/view/{id}',  'Admin\AuctionController@show');
@@ -120,18 +120,21 @@ Route::group(
 
 
             // User Routes
-            Route::group(['prefix' => 'user', 'middleware' => ['api', 'auth.guard:user']], function () {
+            Route::group(['prefix' => 'user', 'middleware' => ['auth', 'auth.guard:user']], function () {
 
 
                 Route::post('/post',  'Admin\AuctionController@store');
                 Route::get('/view/{id}',  'Admin\AuctionController@show');
                 Route::post('/update/{id}',  'Admin\AuctionController@update');
                 Route::delete('/delete/{id}',  'Admin\AuctionController@destroy');
-                Route::get('/fetch',  'Admin\AuctionController@fetchMyAuctions');
+                Route::get('/fetch',  'Admin\AuctionController@fetchAuctions');
+                Route::get('/fetch_autcions_cards', 'Bid\BidController@getAllAuctions');
+                Route::get('/view/card/{auctionId}', 'Bid\BidController@getSingleAuction');
+
 
                 //Route::get('/view/{id}',  'AuctionController@show');
                 Route::post('/bid/{id}',  'AuctionController@placeBid');
-                //Route::get('/fetch',  'AuctionController@fetchAuctions');
+
                 Route::get('/fetch_active',  'AuctionController@activeAuctions');
                 Route::get('/fetch_completed',  'AuctionController@completedAuctions');
                 Route::get('/fetch_upcoming',  'AuctionController@upcomingAuctions');
@@ -139,13 +142,12 @@ Route::group(
                 Route::post('/fetch_user_auctions_listing',  'AuctionController@userAuctionsListing');
                 Route::post('/cancel_bid/{id}',  'AuctionController@cancelBid');
             });
-
-            //b
-
         });
 
-        Route::group(['prefix' => 'bid', 'middleware' => ['api', 'auth.guard:user']], function () {
+        Route::group(['prefix' => 'bid', 'middleware' => ['auth', 'auth.guard:user']], function () {
             Route::post('/place/{auctionId}', 'Bid\BidController@placeBid');
+
+
             Route::get('/by_auction/{auctionId}', 'Bid\BidController@getBidsByAuction');
             Route::get('/by_user', 'Bid\BidController@getBidsByUser');
             Route::get('/all_auctions_with_bids', 'Bid\BidController@getAllAuctionsWithBids');
@@ -154,7 +156,7 @@ Route::group(
 
 
         //admin bid routes
-        Route::group(['prefix' => 'bid_admin', 'middleware' => ['api', 'auth.guard:admin']], function () {
+        Route::group(['prefix' => 'bid_admin', 'middleware' => ['auth', 'auth.guard:admin']], function () {
             Route::get('/all', 'Bid\BidController@getAllAuctionsForAdmin');
             Route::get('/by_auction/{auctionId}', 'Bid\BidController@getBidsByAuction');
             // Route::get('/by_user', 'Bid\BidController@getBidsByUser');

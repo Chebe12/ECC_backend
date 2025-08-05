@@ -41,5 +41,7 @@ class Bid extends Model
         'updated_at' => 'datetime',
     ];
 
+
+
     //
 }
