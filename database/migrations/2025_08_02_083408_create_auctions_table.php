@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('auctions', function (Blueprint $table) {
             $table->id();
+
             // Polymorphic creator (user or admin)
             $table->unsignedBigInteger('creator_id');
             $table->string('creator_type');
@@ -20,18 +21,26 @@ return new class extends Migration
 
             $table->string('title');
             $table->text('description')->nullable();
-            $table->timestamp('auction_start_time');
-            $table->timestamp('auction_end_time');
+
+            // Timestamps - nullable to avoid MySQL default value issues
+            $table->timestamp('auction_start_time')->nullable();
+            $table->timestamp('auction_end_time')->nullable();
+
             $table->decimal('starting_bid', 15, 2);
             $table->decimal('reserve_price', 15, 2)->nullable();
             $table->decimal('buy_now_price', 15, 2)->nullable();
+
             $table->enum('bid_increment', ['Auto', 'fixed'])->default('Auto');
             $table->boolean('auto_extend')->default(false);
             $table->boolean('featured')->default(false);
+
             $table->json('promotional_tags')->nullable();
             $table->string('auth_certificate')->nullable();
+
+            // Polymorphic winner (user or admin)
             $table->unsignedBigInteger('winner_id')->nullable();
             $table->string('winner_type')->nullable();
+
             $table->enum('status', ['pending', 'cancelled', 'rejected', 'approved', 'suspended'])->default('pending');
 
             $table->timestamps();
