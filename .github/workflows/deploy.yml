@@ -24,7 +24,7 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: "ftp.rosymaxpharmacy.com"
-          username: "ECC@testing.rosymaxpharmacy.com"
+          username: "ECC@affliate.rosymaxpharmacy.com"
           password: "dLL9DKGiL0Op"
           local-dir: ./ # Deploy everything
           server-dir: /
