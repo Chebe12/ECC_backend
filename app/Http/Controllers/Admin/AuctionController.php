@@ -537,35 +537,37 @@ class AuctionController extends Controller
     public function getAuctionBidders($auctionId)
     {
         $auction = Auction::with([
-            'bids.user:id,name,email',
+            'bids.bidder:id,name,email', // eager load polymorphic bidder (User or Customer)
         ])->findOrFail($auctionId);
 
-        // Group bids by user, safely handle missing users
-        $bidders = $auction->bids
-            ->filter(fn($bid) => $bid->user !== null) // exclude bids without users
-            ->groupBy('user_id')
+        // Filter out invalid bids without bidder
+        $validBids = $auction->bids->filter(fn($bid) => $bid->bidder !== null);
+
+        // Group valid bids by bidder ID and bidder type (because of polymorphism)
+        $bidders = $validBids->groupBy(fn($bid) => $bid->bidder_type . ':' . $bid->bidder_id)
             ->map(function ($bids) {
-                $user = $bids->first()->user;
+                $bidder = $bids->first()->bidder;
                 $highestBid = $bids->max('amount');
 
                 return [
-                    'user_id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
+                    'bidder_id' => $bidder->id,
+                    'bidder_type' => class_basename(get_class($bidder)), // User or Customer
+                    'name' => $bidder->name,
+                    'email' => $bidder->email,
                     'total_bids' => $bids->count(),
-                    'highest_bid_by_user' => $highestBid,
+                    'highest_bid_by_bidder' => $highestBid,
                 ];
             })->values();
 
-        // Get overall highest bid (only those with users)
-        $validBids = $auction->bids->filter(fn($bid) => $bid->user !== null);
+        // Find highest bid overall (only from valid bids)
         $highestBidAmount = $validBids->max('amount');
-        $highestBid = $validBids->where('amount', $highestBidAmount)->first();
+        $highestBid = $validBids->firstWhere('amount', $highestBidAmount);
 
         $highestBidder = $highestBid ? [
-            'user_id' => $highestBid->user->id,
-            'name' => $highestBid->user->name,
-            'email' => $highestBid->user->email,
+            'bidder_id' => $highestBid->bidder->id,
+            'bidder_type' => class_basename(get_class($highestBid->bidder)),
+            'name' => $highestBid->bidder->name,
+            'email' => $highestBid->bidder->email,
             'amount' => $highestBid->amount,
         ] : null;
 
