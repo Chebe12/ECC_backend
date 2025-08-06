@@ -509,9 +509,9 @@ class AuctionController extends Controller
         $auction = Auction::with('bids')->findOrFail($auctionId);
 
         // Ensure auction is completed
-        if ($auction->status !== 'completed') {
-            return ResponseData::error('You can only set a winner for a completed auction.', 400);
-        }
+        // if ($auction->status !== 'completed') {
+        //     return ResponseData::error('You can only set a winner for a completed auction.', 400);
+        // }
 
         // Check if the user participated in the auction
         $userId = $request->input('user_id');
@@ -540,23 +540,27 @@ class AuctionController extends Controller
             'bids.user:id,name,email',
         ])->findOrFail($auctionId);
 
-        // Group bids by user
-        $bidders = $auction->bids->groupBy('user_id')->map(function ($bids) {
-            $user = $bids->first()->user;
-            $highestBid = $bids->max('amount');
+        // Group bids by user, safely handle missing users
+        $bidders = $auction->bids
+            ->filter(fn($bid) => $bid->user !== null) // exclude bids without users
+            ->groupBy('user_id')
+            ->map(function ($bids) {
+                $user = $bids->first()->user;
+                $highestBid = $bids->max('amount');
 
-            return [
-                'user_id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'total_bids' => $bids->count(),
-                'highest_bid_by_user' => $highestBid,
-            ];
-        })->values();
+                return [
+                    'user_id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'total_bids' => $bids->count(),
+                    'highest_bid_by_user' => $highestBid,
+                ];
+            })->values();
 
-        // Get overall highest bid and bidder
-        $highestBidAmount = $auction->bids->max('amount');
-        $highestBid = $auction->bids->where('amount', $highestBidAmount)->first();
+        // Get overall highest bid (only those with users)
+        $validBids = $auction->bids->filter(fn($bid) => $bid->user !== null);
+        $highestBidAmount = $validBids->max('amount');
+        $highestBid = $validBids->where('amount', $highestBidAmount)->first();
 
         $highestBidder = $highestBid ? [
             'user_id' => $highestBid->user->id,
