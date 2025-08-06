@@ -11,7 +11,8 @@ use App\Helpers\ResponseData;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
-
+use App\Jobs\TriggerAutoBiddingJob;
+use App\Events\BidPlaced;
 
 class BidController extends Controller
 {
@@ -60,6 +61,11 @@ class BidController extends Controller
             $bid->auto_max_bid = $request->auto_max_bid;
             $bid->auto_increment = $request->auto_increment;
             $bid->save();
+
+            // Dispatch auto-bid processing to queue
+            TriggerAutoBiddingJob::dispatch($auction->id)->onQueue('auto-bid');
+
+            event(new BidPlaced($bid));
 
 
             DB::commit();
@@ -175,39 +181,39 @@ class BidController extends Controller
 
         return ResponseData::success($bid, 'Bid details retrieved successfully.');
     }
-    public function getBidHistory($auctionId)
-    {
-        try {
-            $bids = Bid::where('auction_id', $auctionId)
-                ->with(['bidder', 'auction'])
-                ->orderBy('created_at', 'desc')
-                ->get();
+    // public function getBidHistory($auctionId)
+    // {
+    //     try {
+    //         $bids = Bid::where('auction_id', $auctionId)
+    //             ->with(['bidder', 'auction'])
+    //             ->orderBy('created_at', 'desc')
+    //             ->get();
 
-            if ($bids->isEmpty()) {
-                return ResponseData::error([], 'No bids found for this auction.', 404);
-            }
+    //         if ($bids->isEmpty()) {
+    //             return ResponseData::error([], 'No bids found for this auction.', 404);
+    //         }
 
-            return ResponseData::success($bids, 'Bid history retrieved successfully.');
-        } catch (\Throwable $e) {
-            return ResponseData::error([], 'Failed to retrieve bid history: ' . $e->getMessage(), 500);
-        }
-    }
+    //         return ResponseData::success($bids, 'Bid history retrieved successfully.');
+    //     } catch (\Throwable $e) {
+    //         return ResponseData::error([], 'Failed to retrieve bid history: ' . $e->getMessage(), 500);
+    //     }
+    // }
 
     public function getAllAuctions(Request $request)
     {
         $now = now();
         $filter = $request->query('filter');
 
+        // Only fetch auctions with 'approved' status
         $query = Auction::with([
             'media',
             'bids.user:id,name,email',
             'creator:id,name,email',
-        ]);
+        ])->where('status', 'approved');
 
         switch ($filter) {
             case 'live':
-                $query->where('status', 'approved')
-                    ->where('auction_start_time', '<=', $now)
+                $query->where('auction_start_time', '<=', $now)
                     ->where('auction_end_time', '>', $now);
                 break;
 
@@ -216,13 +222,12 @@ class BidController extends Controller
                 break;
 
             case 'ending_soon':
-                $query->where('status', 'approved')
-                    ->whereBetween('auction_end_time', [$now, $now->copy()->addHour()]);
+                $query->whereBetween('auction_end_time', [$now, $now->copy()->addHour()]);
                 break;
 
             case 'all':
             default:
-                // No additional filtering
+                // Already filtered by approved above
                 break;
         }
 
@@ -248,6 +253,7 @@ class BidController extends Controller
 
         return ResponseData::success($auctionsData, 'Auctions fetched successfully.');
     }
+
 
 
     // public function getSingleAuction($id)
@@ -284,6 +290,7 @@ class BidController extends Controller
             'media',
             'bids.user:id,name,email',
             'creator:id,name,email',
+            'winner:id,name,email', // Include winner
         ])->findOrFail($id);
 
         $bids = $auction->bids;
@@ -307,8 +314,30 @@ class BidController extends Controller
                 'name' => $highestBidder->name,
                 'email' => $highestBidder->email,
             ] : null,
+            'winner' => $auction->winner ? [
+                'id' => $auction->winner->id,
+                'name' => $auction->winner->name,
+                // 'email' => $auction->winner->email,
+            ] : null,
         ];
 
         return ResponseData::success($response, 'Auction details retrieved successfully.', 200);
+    }
+
+
+
+
+    public function getBidHistory($auctionId)
+    {
+        $bids = Bid::where('auction_id', $auctionId)
+            ->with(['bidder:id,name,email'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        if ($bids->isEmpty()) {
+            return ResponseData::error([], 'No bids found for this auction.', 404);
+        }
+
+        return ResponseData::success($bids, 'Bid history retrieved successfully.');
     }
 }

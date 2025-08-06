@@ -91,6 +91,8 @@ Route::group(
                 Route::post('/update/{id}',  'Admin\AuctionController@update');
                 Route::delete('/delete/{id}',  'Admin\AuctionController@destroy');
                 Route::get('/fetch',  'Admin\AuctionController@fetchAuctions');
+                Route::get('/{auctionId}/bidder', 'Admin\AuctionController@getAuctionBidders');
+                Route::post('/set/{auctionId}/winner', 'Admin\AuctionController@setAuctionWinner');
 
 
                 // Route::get('/fetch_active',  'AuctionController@activeAuctions');

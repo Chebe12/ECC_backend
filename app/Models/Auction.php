@@ -101,4 +101,8 @@ class Auction extends Model
     {
         return $this->hasOne(Bid::class)->latest('amount');
     }
+    public function winner()
+    {
+        return $this->belongsTo(User::class, 'winner_id');
+    }
 }
