@@ -553,7 +553,8 @@ class AuctionController extends Controller
 
                 return [
                     'bidder_id' => $bidder->id,
-                    'bidder_type' => class_basename(get_class($bidder)), // User or Customer
+                    'bidder_type' => class_basename(get_class($bidder)),
+                    'user_id' => $bidder->id,
                     'name' => $bidder->name,
                     'email' => $bidder->email,
                     'total_bids' => $bids->count(),
@@ -561,13 +562,14 @@ class AuctionController extends Controller
                 ];
             })->values();
 
-        // Find highest bid overall (only from valid bids)
         $highestBidAmount = $validBids->max('amount');
         $highestBid = $validBids->firstWhere('amount', $highestBidAmount);
 
         $highestBidder = $highestBid ? [
+
             'bidder_id' => $highestBid->bidder->id,
             'bidder_type' => class_basename(get_class($highestBid->bidder)),
+            'user_id' => $highestBid->bidder->id,
             'name' => $highestBid->bidder->name,
             'email' => $highestBid->bidder->email,
             'amount' => $highestBid->amount,
