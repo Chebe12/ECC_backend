@@ -505,35 +505,78 @@ class AuctionController extends Controller
     public function setAuctionWinner(Request $request, $auctionId)
     {
         $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'bidder_id' => 'required|integer',
         ]);
 
         $auction = Auction::with('bids')->findOrFail($auctionId);
 
-        // Ensure auction is completed
         // if ($auction->status !== 'completed') {
         //     return ResponseData::error('You can only set a winner for a completed auction.', 400);
         // }
 
-        // Check if the user participated in the auction
-        $userId = $request->input('user_id');
-        $userBid = $auction->bids->firstWhere('user_id', $userId);
+        $bidderId = $request->input('bidder_id');
 
-        // if (!$userBid) {
-        //     return ResponseData::error('This user did not participate in the auction.', 400);
-        // }
+        // We're assuming here that bidder_type is 'App\Models\User'
+        $bidderType = 'App\Models\User';
 
-        // Set the user as the winner
-        $auction->winner_id = $userId;
+        // Confirm the bidder participated
+        $userBid = $auction->bids->first(function ($bid) use ($bidderId, $bidderType) {
+            return $bid->bidder_id == $bidderId && $bid->bidder_type === $bidderType;
+        });
+
+        if (!$userBid) {
+            return ResponseData::error('This user did not participate in the auction.', 400);
+        }
+
+        // Set winner
+        $auction->winner_id = $bidderId;
+        $auction->winner_type = $bidderType;
         $auction->save();
+
+        // Fetch winner's details
+        $winner = $userBid->bidder;
 
         return ResponseData::success([
             'auction_id' => $auction->id,
-            'winner_id' => $userId,
-            'winner_name' => $userBid->user->name,
-            'winner_email' => $userBid->user->email,
+            'winner_id' => $bidderId,
+            'winner_type' => 'user',
+            'winner_name' => $winner->name ?? null,
+            'winner_email' => $winner->email ?? null,
         ], 'Winner set successfully.');
     }
+
+    // public function setAuctionWinner(Request $request, $auctionId)
+    // {
+    //     $request->validate([
+    //         'user_id' => 'required|exists:users,id',
+    //     ]);
+
+    //     $auction = Auction::with('bids')->findOrFail($auctionId);
+
+    //     // Ensure auction is completed
+    //     if ($auction->status !== 'completed') {
+    //         return ResponseData::error('You can only set a winner for a completed auction.', 400);
+    //     }
+
+    //     // Check if the user participated in the auction
+    //     $userId = $request->input('user_id');
+    //     $userBid = $auction->bids->firstWhere('bidder_id', $userId);
+
+    //     if (!$userBid) {
+    //         return ResponseData::error('This user did not participate in the auction.', 400);
+    //     }
+
+    //     // Set the user as the winner
+    //     $auction->winner_id = $userId;
+    //     $auction->save();
+
+    //     return ResponseData::success([
+    //         'auction_id' => $auction->id,
+    //         'winner_id' => $userId,
+    //         'winner_name' => $userBid->user->name,
+    //         'winner_email' => $userBid->user->email,
+    //     ], 'Winner set successfully.');
+    // }
 
 
     public function getAuctionBidders($auctionId)
