@@ -266,7 +266,7 @@ class AuctionController extends Controller
             }
 
             $auctionData['promotional_tags'] = json_encode($validated['promotional_tags'] ?? []);
-            $auctionData['bid_increment'] = $validated['bid_increment'] ?? null;
+            $auctionData['bid_increment'] = $validated['bid_increment'] ?? 'fixed';
             $auctionData['auto_extend'] = $validated['auto_extend'] ?? false;
             $auctionData['featured'] = $validated['featured'] ?? false;
 
