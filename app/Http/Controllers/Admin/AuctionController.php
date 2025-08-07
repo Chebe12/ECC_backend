@@ -237,7 +237,7 @@ class AuctionController extends Controller
                 'starting_bid' => 'required|numeric|min:0',
                 'reserve_price' => 'nullable|numeric|min:0',
                 'buy_now_price' => 'nullable|numeric|min:0',
-                'bid_increment' => 'nullable|in:Auto,fixed',
+                // 'bid_increment' => 'nullable|in:Auto,fixed',
                 'auto_extend' => 'nullable|boolean',
                 'featured' => 'nullable|boolean',
                 'promotional_tags' => 'nullable|array',
@@ -257,8 +257,10 @@ class AuctionController extends Controller
             // Dynamically detect creator_type from guard
             if (auth('admin')->check()) {
                 $auctionData['creator_type'] = 'App\Models\Admin';
+                $auctionData['status'] = 'approved';
             } elseif (auth('user')->check()) {
                 $auctionData['creator_type'] = 'App\Models\User';
+                $auctionData['status'] = 'pending';
             } else {
                 return ResponseData::error('Unauthorized: Unknown user type', 403);
             }
