@@ -519,9 +519,9 @@ class AuctionController extends Controller
         $userId = $request->input('user_id');
         $userBid = $auction->bids->firstWhere('user_id', $userId);
 
-        if (!$userBid) {
-            return ResponseData::error('This user did not participate in the auction.', 400);
-        }
+        // if (!$userBid) {
+        //     return ResponseData::error('This user did not participate in the auction.', 400);
+        // }
 
         // Set the user as the winner
         $auction->winner_id = $userId;
