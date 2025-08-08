@@ -13,6 +13,14 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AuctionWinnerNotification;
+use App\Mail\AuctionLoserNotification;
+use Illuminate\Support\Facades\Log;
+
+
+
+
 
 
 
@@ -509,17 +517,9 @@ class AuctionController extends Controller
         ]);
 
         $auction = Auction::with('bids')->findOrFail($auctionId);
-
-        // if ($auction->status !== 'completed') {
-        //     return ResponseData::error('You can only set a winner for a completed auction.', 400);
-        // }
-
         $bidderId = $request->input('bidder_id');
-
-        // We're assuming here that bidder_type is 'App\Models\User'
         $bidderType = 'App\Models\User';
 
-        // Confirm the bidder participated
         $userBid = $auction->bids->first(function ($bid) use ($bidderId, $bidderType) {
             return $bid->bidder_id == $bidderId && $bid->bidder_type === $bidderType;
         });
@@ -533,8 +533,40 @@ class AuctionController extends Controller
         $auction->winner_type = $bidderType;
         $auction->save();
 
-        // Fetch winner's details
         $winner = $userBid->bidder;
+
+        // 📩 Notify the winner
+        // if ($winner && $winner->email) {
+        //     Mail::to($winner->email)->send(new AuctionWinnerNotification($auction, $winner));
+        // }
+        Mail::send('mails.winner', [
+            'name' => $winner->name,
+            'auctionTitle' => $auction->title,
+            'bidAmount' => $userBid->amount
+        ], function ($message) use ($winner) {
+            $message->to($winner->email)
+                ->subject('🎉 You Won the Auction!');
+        });
+
+        // Notify Others (Losers)
+        foreach ($auction->bids as $bid) {
+            if (
+                $bid->bidder_id != $bidderId &&
+                $bid->bidder_type === $bidderType
+            ) {
+                $loser = $bid->bidder;
+
+                if ($loser && $loser->email) {
+                    Mail::send('mails.loser', [
+                        'name' => $loser->name,
+                        'auctionTitle' => $auction->title
+                    ], function ($message) use ($loser) {
+                        $message->to($loser->email)
+                            ->subject('Auction Result – Better Luck Next Time!');
+                    });
+                }
+            }
+        }
 
         return ResponseData::success([
             'auction_id' => $auction->id,
@@ -542,7 +574,7 @@ class AuctionController extends Controller
             'winner_type' => 'user',
             'winner_name' => $winner->name ?? null,
             'winner_email' => $winner->email ?? null,
-        ], 'Winner set successfully.');
+        ], 'Winner set successfully and emails sent.');
     }
 
     // public function setAuctionWinner(Request $request, $auctionId)
