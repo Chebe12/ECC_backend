@@ -298,42 +298,42 @@ class BidController extends Controller
     {
         $auction = Auction::with([
             'media',
-            'bids.user:id,name,email',
-            'creator:id,name,email',
-            'winner:id,name,email', // Include winner
+            'bids.bidder:id,name', // use bidder instead of user
+            'creator:id,name',
+            'winner:id,name',
         ])->findOrFail($id);
 
-        $bids = $auction->bids;
+        $bids = $auction->bids->filter(fn($bid) => $bid->bidder !== null);
 
         $highestBid = $bids->max('amount');
 
         $highestBidRecord = $bids
             ->where('amount', $highestBid)
-            ->filter(fn($bid) => $bid->user !== null)
             ->first();
 
-        $highestBidder = $highestBidRecord?->user;
+        $highestBidder = $highestBidRecord?->bidder;
 
         $response = [
             'auction' => $auction,
             'stage' => $auction->status_label,
             'total_bids' => $bids->count(),
-            'total_active_bidders' => $bids->unique('user_id')->count(),
+            'total_active_bidders' => $bids->unique(fn($b) => $b->bidder_type . '-' . $b->bidder_id)->count(),
             'highest_bid' => $highestBid,
             'highest_bidder' => $highestBidder ? [
                 'id' => $highestBidder->id,
                 'name' => $highestBidder->name,
-                'email' => $highestBidder->email,
+                //'email' => $highestBidder->email,
             ] : null,
-            'winner' => $auction->winner ? [
-                'id' => $auction->winner->id,
-                'name' => $auction->winner->name,
-                // 'email' => $auction->winner->email,
-            ] : null,
+            // 'winner' => $auction->winner ? [
+            //     'id' => $auction->winner->id,
+            //     'name' => $auction->winner->name,
+            //     // 'email' => $auction->winner->email,
+            // ] : null,
         ];
 
         return ResponseData::success($response, 'Auction details retrieved successfully.', 200);
     }
+
 
 
 

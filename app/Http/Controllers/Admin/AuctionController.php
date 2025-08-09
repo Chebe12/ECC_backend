@@ -117,31 +117,40 @@ class AuctionController extends Controller
 
     //     return ResponseData::success($response, 'Auction details retrieved successfully.', 200);
     // }
-
     public function show($id)
     {
         $auction = Auction::with([
             'media',
-            'bids.user:id,name,email',
+            'bids.bidder:id,name,email', // load bidder instead of user
             'creator:id,name,email',
-            'winner:id,name,email', // Include winner
+            'winner:id,name,email',
         ])->findOrFail($id);
 
-        $bids = $auction->bids;
+        $bids = $auction->bids->filter(fn($bid) => $bid->bidder !== null);
 
         $highestBid = $bids->max('amount');
 
         $highestBidRecord = $bids
             ->where('amount', $highestBid)
-            ->filter(fn($bid) => $bid->user !== null)
             ->first();
 
-        $highestBidder = $highestBidRecord?->user;
+        $highestBidder = $highestBidRecord?->bidder;
+
+        $biddersList = $bids->map(function ($bid) {
+            return [
+                'id' => $bid->bidder->id,
+                'name' => $bid->bidder->name,
+                'email' => $bid->bidder->email,
+                'amount' => $bid->amount,
+                'bid_time' => $bid->created_at->toDateTimeString(),
+            ];
+        })->values();
 
         $response = [
             'auction' => $auction,
+            'status_label' => $auction->status_label,
             'total_bids' => $bids->count(),
-            'total_active_bidders' => $bids->unique('user_id')->count(),
+            'total_active_bidders' => $bids->unique(fn($b) => $b->bidder_type . '-' . $b->bidder_id)->count(),
             'highest_bid' => $highestBid,
             'highest_bidder' => $highestBidder ? [
                 'id' => $highestBidder->id,
@@ -153,10 +162,51 @@ class AuctionController extends Controller
                 'name' => $auction->winner->name,
                 'email' => $auction->winner->email,
             ] : null,
+            'bidders' => $biddersList,
         ];
 
         return ResponseData::success($response, 'Auction details retrieved successfully.', 200);
     }
+
+    // public function show($id)
+    // {
+    //     $auction = Auction::with([
+    //         'media',
+    //         'bids.user:id,name,email',
+    //         'creator:id,name,email',
+    //         'winner:id,name,email', // Include winner
+    //     ])->findOrFail($id);
+
+    //     $bids = $auction->bids;
+
+    //     $highestBid = $bids->max('amount');
+
+    //     $highestBidRecord = $bids
+    //         ->where('amount', $highestBid)
+    //         ->filter(fn($bid) => $bid->user !== null)
+    //         ->first();
+
+    //     $highestBidder = $highestBidRecord?->user;
+
+    //     $response = [
+    //         'auction' => $auction,
+    //         'total_bids' => $bids->count(),
+    //         'total_active_bidders' => $bids->unique('user_id')->count(),
+    //         'highest_bid' => $highestBid,
+    //         'highest_bidder' => $highestBidder ? [
+    //             'id' => $highestBidder->id,
+    //             'name' => $highestBidder->name,
+    //             'email' => $highestBidder->email,
+    //         ] : null,
+    //         'winner' => $auction->winner ? [
+    //             'id' => $auction->winner->id,
+    //             'name' => $auction->winner->name,
+    //             'email' => $auction->winner->email,
+    //         ] : null,
+    //     ];
+
+    //     return ResponseData::success($response, 'Auction details retrieved successfully.', 200);
+    // }
 
 
 
