@@ -217,6 +217,14 @@ class BidController extends Controller
                     ->where('auction_end_time', '>', $now);
                 break;
 
+            case 'upcoming':
+                $query->where('auction_start_time', '>', $now);
+                break;
+
+            case 'past':
+                $query->where('auction_end_time', '<=', $now);
+                break;
+
             case 'featured':
                 $query->where('is_featured', true);
                 break;
@@ -239,7 +247,8 @@ class BidController extends Controller
             $highestBidder = $auction->bids->where('amount', $highestBid)->first()?->user;
 
             return [
-                'auction' => $auction,
+                'auction' => [$auction],
+                'stage' => $auction->status_label,
                 'total_bids' => $auction->bids->count(),
                 'total_active_bidders' => $totalActiveBidders,
                 'highest_bid' => $highestBid,
@@ -253,6 +262,7 @@ class BidController extends Controller
 
         return ResponseData::success($auctionsData, 'Auctions fetched successfully.');
     }
+
 
 
 
@@ -306,6 +316,7 @@ class BidController extends Controller
 
         $response = [
             'auction' => $auction,
+            'stage' => $auction->status_label,
             'total_bids' => $bids->count(),
             'total_active_bidders' => $bids->unique('user_id')->count(),
             'highest_bid' => $highestBid,

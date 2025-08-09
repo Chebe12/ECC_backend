@@ -80,17 +80,18 @@ class Auction extends Model
                 return 'pending_approval';
             case 'approved':
                 if ($this->auction_start_time > $now) {
-                    return 'future';
+                    return 'upcoming';
                 } elseif ($this->auction_start_time <= $now && $this->auction_end_time > $now) {
                     return 'live';
                 } elseif ($this->auction_end_time <= $now) {
-                    return 'ended';
+                    return 'past';
                 }
                 break;
         }
 
         return 'unknown';
     }
+
 
 
     public function bids()
