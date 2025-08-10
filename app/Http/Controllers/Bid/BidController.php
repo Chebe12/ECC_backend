@@ -336,6 +336,50 @@ class BidController extends Controller
 
 
 
+    public function getMyBids($auctionId)
+    {
+        $userId = auth()->id();
+
+        // Fetch the auction
+        $auction = Auction::findOrFail($auctionId);
+
+        // All bids in this auction, ordered highest first
+        $allBids = Bid::where('auction_id', $auctionId)
+            ->orderBy('amount', 'desc')
+            ->get();
+
+        // User's all bids
+        $userBids = $allBids->where('bidder_id', $userId)->values();
+
+        // Latest bid by user (most recent timestamp)
+        $latestBid = $userBids->sortByDesc('created_at')->first();
+
+        // Highest bid in the auction
+        $highestBid = $allBids->first();
+
+        // Is the user winning?
+        $isWinning = $highestBid && $highestBid->bidder_id === $userId;
+
+        // Number of people ahead of user
+        $peopleAhead = 0;
+        if (!$isWinning && $latestBid) {
+            // Count unique bidders with bids higher than user's latest bid
+            $peopleAhead = $allBids
+                ->filter(fn($bid) => $bid->amount > $latestBid->amount)
+                ->pluck('bidder_id')
+                ->unique()
+                ->count();
+        }
+        return ResponseData::success([
+            // 'auction' => $auction,
+            'user_bids' => $userBids,
+            'latest_bid' => $latestBid,
+            'highest_bid' => $highestBid,
+            'is_winning' => $isWinning,
+            'people_ahead' => $peopleAhead
+        ], 'User bids retrieved successfully.');
+    }
+
 
 
     public function getBidHistory($auctionId)
