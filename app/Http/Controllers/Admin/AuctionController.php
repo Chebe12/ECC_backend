@@ -80,13 +80,15 @@ class AuctionController extends Controller
                 break;
         }
 
-        $auctions = $query->get()->map(function ($auction) {
+        // Order latest first
+        $auctions = $query->orderBy('created_at', 'desc')->get()->map(function ($auction) {
             $auction->stage = $auction->status_label;
             return $auction;
         });
 
         return ResponseData::success($auctions, 'Auctions fetched successfully.');
     }
+
 
 
 
@@ -416,16 +418,17 @@ class AuctionController extends Controller
                 'promotional_tags' => 'nullable|array',
                 'promotional_tags.*' => 'string|max:100',
 
+                // Media can be files or base64 strings
                 'media' => 'nullable|array',
-                'media.*' => 'file|mimes:jpeg,png,jpg,gif,svg,mp4,mov,avi,webm|max:10240',
+                'media.*' => 'nullable',
 
                 'auth_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             ]);
 
-            // Update auction data
+            // Update auction details
             $auction->update($validated);
 
-            // Replace auth certificate
+            // Replace auth certificate if new one is uploaded
             if ($request->hasFile('auth_certificate')) {
                 if ($auction->auth_certificate && Storage::disk('public')->exists($auction->auth_certificate)) {
                     Storage::disk('public')->delete($auction->auth_certificate);
@@ -435,8 +438,8 @@ class AuctionController extends Controller
                 $auction->save();
             }
 
-            // Handle media update (delete old ones and add new)
-            if ($request->hasFile('media')) {
+            // Handle media replacement
+            if (!empty($validated['media'])) {
                 // Delete old media files
                 foreach ($auction->media as $media) {
                     if (Storage::disk('public')->exists($media->media_path)) {
@@ -445,17 +448,49 @@ class AuctionController extends Controller
                     $media->delete();
                 }
 
-                // Upload new media
-                foreach ($request->file('media') as $file) {
-                    $mime = $file->getMimeType();
-                    $fileType = str_starts_with($mime, 'video') ? 'video' : 'photo';
-                    $path = $file->store('auction_media', 'public');
+                // Add new media
+                foreach ($validated['media'] as $item) {
 
-                    AuctionMedia::create([
-                        'auction_id' => $auction->id,
-                        'media_type' => $fileType,
-                        'media_path' => $path,
-                    ]);
+                    // If uploaded as file
+                    if ($item instanceof \Illuminate\Http\UploadedFile) {
+                        if (str_starts_with($item->getMimeType(), 'image/')) {
+                            $path = $item->store('auction_media', 'public');
+                            AuctionMedia::create([
+                                'auction_id' => $auction->id,
+                                'media_type' => 'photo',
+                                'media_path' => $path,
+                            ]);
+                        }
+                    }
+
+                    // If sent as base64
+                    elseif (is_string($item)) {
+                        $base64 = $item;
+
+                        // Strip "data:image/...;base64," if present
+                        if (strpos($base64, 'base64,') !== false) {
+                            $base64 = explode('base64,', $base64)[1];
+                        }
+
+                        $imageData = base64_decode($base64);
+
+                        // Determine file type
+                        $extension = 'png'; // default
+                        if (preg_match('/^data:image\/(\w+);base64,/', $item, $matches)) {
+                            $extension = strtolower($matches[1]);
+                        }
+
+                        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif'])) {
+                            $fileName = 'auction_media/' . uniqid() . '.' . $extension;
+                            Storage::disk('public')->put($fileName, $imageData);
+
+                            AuctionMedia::create([
+                                'auction_id' => $auction->id,
+                                'media_type' => 'photo',
+                                'media_path' => $fileName,
+                            ]);
+                        }
+                    }
                 }
             }
 
@@ -467,7 +502,7 @@ class AuctionController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseData::error('Validation failed', 422, $e->errors());
         } catch (\Exception $e) {
-            \Log::error('Auction update failed: ' . $e->getMessage());
+            Log::error('Auction update failed: ' . $e->getMessage());
 
             return ResponseData::error(
                 'An unexpected error occurred while updating the auction.',
@@ -476,7 +511,6 @@ class AuctionController extends Controller
             );
         }
     }
-
 
 
     public function destroy($id)

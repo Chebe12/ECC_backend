@@ -239,7 +239,10 @@ class BidController extends Controller
                 break;
         }
 
-        $auctions = $query->get();
+        // Order by latest created first
+        $auctions = $query
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         $auctionsData = $auctions->map(function ($auction) {
             $highestBid = $auction->bids->max('amount');
@@ -262,6 +265,7 @@ class BidController extends Controller
 
         return ResponseData::success($auctionsData, 'Auctions fetched successfully.');
     }
+
 
 
 
