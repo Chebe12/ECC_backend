@@ -148,6 +148,8 @@ Route::group(
 
         Route::group(['prefix' => 'bid', 'middleware' => ['auth', 'auth.guard:user']], function () {
             Route::post('/place/{auctionId}', 'Bid\BidController@placeBid');
+            Route::get('/auction/{auctionId}/user-bids', 'Bid\BidController@getMyBids');
+
 
 
             Route::get('/by_auction/{auctionId}', 'Bid\BidController@getBidsByAuction');

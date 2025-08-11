@@ -295,14 +295,14 @@ class AuctionController extends Controller
                 'starting_bid' => 'required|numeric|min:0',
                 'reserve_price' => 'nullable|numeric|min:0',
                 'buy_now_price' => 'nullable|numeric|min:0',
-                // 'bid_increment' => 'nullable|in:Auto,fixed',
                 'auto_extend' => 'nullable|boolean',
                 'featured' => 'nullable|boolean',
                 'promotional_tags' => 'nullable|array',
                 'promotional_tags.*' => 'string|max:100',
 
+                // Unified media array — can be files or base64 strings
                 'media' => 'nullable|array',
-                'media.*' => 'file|mimes:jpeg,png,jpg,gif,svg,mp4,mov,avi,webm|max:10240',
+                'media.*' => 'nullable',
 
                 'auth_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             ]);
@@ -312,7 +312,7 @@ class AuctionController extends Controller
             $auctionData = $validated;
             $auctionData['creator_id'] = $user->id;
 
-            // Dynamically detect creator_type from guard
+            // Detect creator type
             if (auth('admin')->check()) {
                 $auctionData['creator_type'] = 'App\Models\Admin';
                 $auctionData['status'] = 'approved';
@@ -334,21 +334,42 @@ class AuctionController extends Controller
                 $auctionData['auth_certificate'] = $certificatePath;
             }
 
-            // Create the auction
+            // Create auction
             $auction = Auction::create($auctionData);
 
-            // Handle media files
-            if ($request->hasFile('media')) {
-                foreach ($request->file('media') as $file) {
-                    $mime = $file->getMimeType();
-                    $fileType = str_starts_with($mime, 'video') ? 'video' : 'photo';
-                    $path = $file->store('auction_media', 'public');
+            // Handle media (both files & base64)
+            if (!empty($validated['media'])) {
+                foreach ($validated['media'] as $item) {
 
-                    AuctionMedia::create([
-                        'auction_id' => $auction->id,
-                        'media_type' => $fileType,
-                        'media_path' => $path,
-                    ]);
+                    // If it's a file upload
+                    if ($item instanceof \Illuminate\Http\UploadedFile) {
+                        if (str_starts_with($item->getMimeType(), 'image/')) {
+                            $path = $item->store('auction_media', 'public');
+                            AuctionMedia::create([
+                                'auction_id' => $auction->id,
+                                'media_type' => 'photo',
+                                'media_path' => $path,
+                            ]);
+                        }
+                    }
+
+                    // If it's a base64 string
+                    elseif (is_string($item) && preg_match('/^data:image\/(\w+);base64,/', $item, $type)) {
+                        $imageData = substr($item, strpos($item, ',') + 1);
+                        $type = strtolower($type[1]); // jpg, png, gif
+
+                        if (in_array($type, ['jpg', 'jpeg', 'png', 'gif'])) {
+                            $imageData = base64_decode($imageData);
+                            $fileName = 'auction_media/' . uniqid() . '.' . $type;
+                            Storage::disk('public')->put($fileName, $imageData);
+
+                            AuctionMedia::create([
+                                'auction_id' => $auction->id,
+                                'media_type' => 'photo',
+                                'media_path' => $fileName,
+                            ]);
+                        }
+                    }
                 }
             }
 
@@ -360,7 +381,7 @@ class AuctionController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseData::error('Validation failed', 422, $e->errors());
         } catch (\Exception $e) {
-            \Log::error('Auction creation failed: ' . $e->getMessage());
+            Log::error('Auction creation failed: ' . $e->getMessage());
             return ResponseData::error(
                 'An unexpected error occurred while creating the auction.',
                 $e->getMessage(),
@@ -368,6 +389,7 @@ class AuctionController extends Controller
             );
         }
     }
+
 
 
     public function update(Request $request, $id)
